@@ -22,6 +22,15 @@ srcs = [
 	'com/google/android/play/core/integrity/IntegrityTokenResponse.java',
 	'com/google/android/play/core/integrity/StandardIntegrityManager.java',
 	'com/google/android/play/core/integrity/IntegrityServiceException.java',
+	# Play Fused Location, bridged onto the platform LocationManager (which ATL
+	# backs with the XDG location portal over D-Bus).
+	'com/google/android/gms/location/Priority.java',
+	'com/google/android/gms/location/LocationRequest.java',
+	'com/google/android/gms/location/LocationResult.java',
+	'com/google/android/gms/location/LocationAvailability.java',
+	'com/google/android/gms/location/LocationCallback.java',
+	'com/google/android/gms/location/FusedLocationProviderClient.java',
+	'com/google/android/gms/location/LocationServices.java',
 ]
 java_args = [
     '-bootclasspath', bootclasspath,
