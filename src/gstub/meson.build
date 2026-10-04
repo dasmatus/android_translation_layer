@@ -1,5 +1,27 @@
 srcs = [
 	'com/google/android/gms/providerinstaller/ProviderInstallerImpl.java',
+	# Minimal Play services Task<T>, enough for the "request().addOnSuccessListener()" pattern.
+	'com/google/android/gms/tasks/Task.java',
+	'com/google/android/gms/tasks/Tasks.java',
+	'com/google/android/gms/tasks/ImmediateTask.java',
+	'com/google/android/gms/tasks/OnSuccessListener.java',
+	'com/google/android/gms/tasks/OnFailureListener.java',
+	'com/google/android/gms/tasks/OnCompleteListener.java',
+	'com/google/android/gms/tasks/OnCanceledListener.java',
+	'com/google/android/gms/tasks/RuntimeExecutionException.java',
+	# Play services availability: report the locally-served subset as present.
+	'com/google/android/gms/common/ConnectionResult.java',
+	'com/google/android/gms/common/GoogleApiAvailabilityLight.java',
+	'com/google/android/gms/common/GoogleApiAvailability.java',
+	'com/google/android/gms/common/GooglePlayServicesUtil.java',
+	# Play Integrity API: software-unverified verdicts. See README.md for limits.
+	'com/google/android/play/core/integrity/SoftwareVerdict.java',
+	'com/google/android/play/core/integrity/IntegrityManager.java',
+	'com/google/android/play/core/integrity/IntegrityManagerFactory.java',
+	'com/google/android/play/core/integrity/IntegrityTokenRequest.java',
+	'com/google/android/play/core/integrity/IntegrityTokenResponse.java',
+	'com/google/android/play/core/integrity/StandardIntegrityManager.java',
+	'com/google/android/play/core/integrity/IntegrityServiceException.java',
 ]
 java_args = [
     '-bootclasspath', bootclasspath,
