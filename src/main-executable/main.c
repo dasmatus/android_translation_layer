@@ -471,6 +471,19 @@ static void open(GtkApplication *app, GFile **files, gint nfiles, const gchar *h
 	gtk_css_provider_load_from_resource(cssProvider, "/com/gitlab/android-translation-layer/android-translation-layer/default-stylesheet.css");
 	gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(cssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
+	// Desktop theme coherence: if the desktop points us at a CSS file, layer it
+	// over our own default stylesheet so apps pick up the desktop's palette.
+	// This is the file-backed half of the interface in doc/theme-coherence.md;
+	// USER priority sits above our APPLICATION default but below an app's own
+	// inline styling. Dark/light already follows the org.freedesktop.appearance
+	// portal that GTK honours on its own, so this is only the extra palette.
+	const char *theme_css = getenv("DERISK_THEME_CSS");
+	if (theme_css && theme_css[0]) {
+		GtkCssProvider *themeProvider = gtk_css_provider_new();
+		gtk_css_provider_load_from_path(themeProvider, theme_css);
+		gtk_style_context_add_provider_for_display(gdk_display_get_default(), GTK_STYLE_PROVIDER(themeProvider), GTK_STYLE_PROVIDER_PRIORITY_USER);
+	}
+
 	prepare_main_looper(env);
 
 	/* extract native libraries from apk*/
