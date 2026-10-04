@@ -3,54 +3,62 @@
 ATL renders Android apps as GTK4 windows. "Theme coherence" means those windows
 pick up the host desktop's look — its light/dark mode and its palette/accent —
 so an Android app does not stand out against native apps. This is written for
-coherence with derisk (the LosOS Desktop shell), but every mechanism here is a
-Freedesktop standard, so it works under any desktop that implements them.
+coherence with derisk (the LosOS Desktop shell), and the interface below is the
+one the derisk theming engine publishes.
 
-There are two layers, and ATL consumes both through standard interfaces rather
-than anything derisk-specific:
+## The interface derisk publishes
 
-## 1. Light/dark — already handled, no ATL code
+The derisk theming engine (crate `mcsapi-theme` in dasmatus/mcsapi — zero
+dependencies, no toolkit) owns the theme and writes it to two files under
+`$XDG_RUNTIME_DIR/derisk/`, each rewritten atomically (write a temp file, then
+rename) whenever the theme changes:
 
-GTK4 reads the `color-scheme` key of the `org.freedesktop.appearance` namespace
-from the `org.freedesktop.portal.Settings` D-Bus interface and flips
-`gtk-application-prefer-dark-theme` to match, with no action from the
-application. LosOS Desktop enables a settings portal, so an ATL app already
-follows the desktop between light and dark. Nothing to do; noted so it is not
-re-implemented.
+- **`theme.json`** — `id`, `name`, `scheme` (dark/light), `palette`
+  (background, surface, foreground, border, accent, destructive), `tokens`
+  (the shadcn roles: background, foreground, card, muted, muted_foreground,
+  primary, primary_foreground, secondary, hover, destructive,
+  destructive_foreground, border, ring, overlay, selection, radius), `fonts`
+  (sans, weight, monospace, sizes in logical px), `icons` (theme, cursor,
+  cursor_size), and a `portal` block mirroring the Freedesktop appearance keys
+  (color_scheme 1=dark/2=light, accent_color `[r,g,b]` in 0..1, contrast).
+  Colors are `"#rrggbb"` or `"#rrggbbaa"`.
+- **`android/values/colors.xml`** — the same theme as a ready Android
+  resource: `mcsapi_<role>` colors (`#aarrggbb`) with
+  `colorPrimary`/`colorAccent`/`colorSurface`/`colorOnSurface`/`colorError`/
+  `textColorPrimary`/`windowBackground`/`statusBarColor` aliased onto them.
+  This is what `mcsapi_theme::export::android_colors(&theme)` generates.
 
-## 2. Palette / accent — the small interface ATL consumes
+A consumer watches `$XDG_RUNTIME_DIR/derisk/` with inotify for `IN_MOVED_TO`
+(the rename half of each atomic write) to pick up live theme changes.
 
-For the richer coherence (accent colour, surface colours matching derisk's
-theme), ATL takes a CSS layer from the desktop. There are two ways in, in
-priority order; the first the desktop provides wins:
+The long-term live signal is the standard `org.freedesktop.appearance` keys
+(`color-scheme`, `accent-color`, `contrast`) on the `org.freedesktop.portal.Settings`
+D-Bus interface — the same values as the `portal` block above — but the engine
+does not implement that yet, so **read the files, do not depend on the portal
+signal**. x2mcsapi remains the CSS/GTK/Qt restyler for foreign toolkit apps; it
+is not this interface.
 
-### a. File-backed (implemented)
+## What ATL consumes, and the split
 
-If the environment variable `DERISK_THEME_CSS` names a readable CSS file, ATL
-loads it as a `GtkCssProvider` at `GTK_STYLE_PROVIDER_PRIORITY_USER` — above
-ATL's own default stylesheet, below an app's inline styling
-(`src/main-executable/main.c`). The desktop writes its current theme to that
-file as GTK CSS (for example `@define-color` accent definitions and
-`window { background-color: … }`) and points ATL at it. This is deliberately
-the lowest-coupling option: a plain file, no new D-Bus surface, re-read on each
-app launch.
+- **Light/dark** already follows the `org.freedesktop.appearance` `color-scheme`
+  key that GTK4 honours on its own, through the settings portal LosOS Desktop
+  enables. No ATL code; noted so it is not re-implemented.
+- **ATL's own GTK chrome** (title bar, dialogs) is restyled by x2mcsapi as any
+  GTK4 app, so ATL need not drive it.
+- **The Android content ATL draws itself** is the piece x2mcsapi cannot reach,
+  because it is ATL's custom rendering of Android views rather than standard
+  GTK widgets. This is what ATL consumes the interface for: map
+  `theme.json`'s palette/tokens onto the colors ATL's view rendering uses (and
+  `colors.xml` onto the framework resource values an app reads for
+  `?attr/colorPrimary` and friends), re-reading on each `IN_MOVED_TO`.
 
-### b. D-Bus appearance portal (planned)
+## Status
 
-The standard place for a desktop to publish an accent colour is the
-`accent-color` key of the same `org.freedesktop.appearance` namespace on
-`org.freedesktop.portal.Settings`, with a `SettingChanged` signal on change.
-When the derisk theming engine publishes there, ATL should read `accent-color`
-at startup, subscribe to `SettingChanged`, and translate the value into the
-same CSS layer as (a) so a live theme change restyles running apps. ATL already
-generates D-Bus proxies with `gnome.gdbus_codegen` for its portals, so this
-follows the existing pattern.
-
-## Open item
-
-The exact palette keys derisk's theming engine will expose (accent only, or a
-fuller set of role colours, and under which interface) are being settled with
-the theming-engine thread. Option (a) is live now and needs only a file; option
-(b) is the standards-track path and will be wired once that interface is fixed.
-Until then ATL stays coherent on light/dark and on whatever CSS the desktop
-chooses to hand it through `DERISK_THEME_CSS`.
+- Implemented: a stopgap GTK CSS layer — if `DERISK_THEME_CSS` names a CSS
+  file, `main.c` loads it over ATL's default stylesheet at USER priority. A
+  desktop that generates GTK CSS from the theme can use it today.
+- The task, to do in an environment that can build and run ATL end to end:
+  read `$XDG_RUNTIME_DIR/derisk/theme.json` (and/or overlay the published
+  `colors.xml` onto framework-res), apply its palette/tokens to ATL's view
+  rendering, and watch the directory with inotify for live updates. The
+  `mcsapi-theme` crate's `export::json` fixes the exact field names to parse.
