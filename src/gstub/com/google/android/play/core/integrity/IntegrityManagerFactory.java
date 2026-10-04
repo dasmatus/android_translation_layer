@@ -37,8 +37,8 @@ public final class IntegrityManagerFactory {
 							}
 
 							@Override
-							public int showDialog(android.app.Activity activity, int requestCode) {
-								return 0;
+							public Task<Integer> showDialog(android.app.Activity activity, int requestCode) {
+								return Tasks.forResult(0);
 							}
 						});
 					}
@@ -71,8 +71,8 @@ public final class IntegrityManagerFactory {
 					}
 
 					@Override
-					public int showDialog(android.app.Activity activity, int requestCode) {
-						return 0;
+					public Task<Integer> showDialog(android.app.Activity activity, int requestCode) {
+						return Tasks.forResult(0);
 					}
 				});
 			}

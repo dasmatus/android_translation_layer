@@ -13,12 +13,19 @@ public class LocationManager {
 
 	static Set<LocationListener> listeners = new HashSet<>();
 
+	// The most recent fix the portal delivered, so getLastKnownLocation has an
+	// answer once anything in the process has asked for updates. Many apps
+	// (and the gstub Fused Location client on top of this) read the last known
+	// location first and only then subscribe, so a permanent null here left
+	// them with nothing.
+	private static volatile Location lastKnown;
+
 	public String getBestProvider(Criteria criteria, boolean enabledOnly) {
 		return "xdgportal";
 	}
 
 	public Location getLastKnownLocation(String provider) {
-		return null;
+		return lastKnown;
 	}
 
 	public void requestLocationUpdates(String provider, long minTimeMs, float minDistanceM, LocationListener listener) {
@@ -35,8 +42,11 @@ public class LocationManager {
 	                                    double speed,
 	                                    double bearing,
 	                                    long timestamp) {
-		for (LocationListener locationListener : listeners) {
-			locationListener.onLocationChanged(new Location(latitude, longitude, altitude, accuracy, speed, bearing, timestamp));
+		Location location = new Location(latitude, longitude, altitude, accuracy, speed, bearing, timestamp);
+		lastKnown = location;
+		// Iterate a copy: a listener may remove itself from inside the callback.
+		for (LocationListener locationListener : new HashSet<>(listeners)) {
+			locationListener.onLocationChanged(location);
 		}
 	}
 
@@ -45,6 +55,7 @@ public class LocationManager {
 	}
 
 	public void removeUpdates(LocationListener listener) {
+		listeners.remove(listener);
 	}
 
 	public List<String> getAllProviders() {

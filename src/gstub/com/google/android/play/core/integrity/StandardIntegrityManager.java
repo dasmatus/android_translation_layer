@@ -16,14 +16,16 @@ public interface StandardIntegrityManager {
 	Task<StandardIntegrityTokenProvider> prepareIntegrityToken(PrepareIntegrityTokenRequest request);
 
 	abstract class PrepareIntegrityTokenRequest {
-		public abstract Long getCloudProjectNumber();
+		// The real accessor is `long cloudProjectNumber()`: a primitive, and
+		// not bean-style. Apps call it by that exact descriptor.
+		public abstract long cloudProjectNumber();
 
 		public static Builder builder() {
 			return new Builder();
 		}
 
 		public static final class Builder {
-			private Long cloudProjectNumber;
+			private long cloudProjectNumber;
 
 			public Builder setCloudProjectNumber(long cloudProjectNumber) {
 				this.cloudProjectNumber = cloudProjectNumber;
@@ -31,10 +33,10 @@ public interface StandardIntegrityManager {
 			}
 
 			public PrepareIntegrityTokenRequest build() {
-				final Long fCloud = cloudProjectNumber;
+				final long fCloud = cloudProjectNumber;
 				return new PrepareIntegrityTokenRequest() {
 					@Override
-					public Long getCloudProjectNumber() {
+					public long cloudProjectNumber() {
 						return fCloud;
 					}
 				};
@@ -72,7 +74,9 @@ public interface StandardIntegrityManager {
 	abstract class StandardIntegrityToken {
 		public abstract String token();
 
-		public abstract int showDialog(android.app.Activity activity, int requestCode);
+		// Task<Integer>, not int: the real API's descriptor, which app bytecode
+		// links against by name and type.
+		public abstract Task<Integer> showDialog(android.app.Activity activity, int requestCode);
 	}
 
 	interface StandardIntegrityTokenProvider {

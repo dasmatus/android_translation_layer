@@ -47,6 +47,12 @@ public final class LocationRequest {
 			this.intervalMillis = intervalMillis;
 		}
 
+		// The one-argument form apps most often compile against; Play
+		// defaults it to balanced power.
+		public Builder(long intervalMillis) {
+			this(Priority.PRIORITY_BALANCED_POWER_ACCURACY, intervalMillis);
+		}
+
 		public Builder setIntervalMillis(long millis) {
 			this.intervalMillis = millis;
 			return this;

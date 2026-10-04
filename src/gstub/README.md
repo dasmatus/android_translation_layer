@@ -11,14 +11,19 @@ provide the API surface locally, served by whatever the host can actually do.
 - `com.google.android.gms.providerinstaller.ProviderInstallerImpl` — no-op; ATL's
   TLS already comes from the host.
 - `com.google.android.gms.tasks.*` — a minimal `Task<T>` and `Tasks`. The shim's
-  producers only ever return already-complete tasks, so listeners fire
-  synchronously.
+  producers only ever return already-complete tasks. As in Play, a listener
+  added without an executor runs on the main thread; one added with an executor
+  runs on it.
 - `com.google.android.gms.common.*` — Play services availability. The locally
   served subset is reported as present (`ConnectionResult.SUCCESS`); an app then
   calls into it and each call is handled by its own shim. An API with no shim
   resolves as absent at the point of use, the normal GMS degradation path.
 - `com.google.android.play.core.integrity.*` — the Play Integrity API, both the
   classic `IntegrityManager` and the newer `StandardIntegrityManager`.
+- `com.google.android.gms.location.*` — the Fused Location client, implemented
+  on the platform `android.location.LocationManager`, which ATL backs with the
+  XDG location portal over D-Bus. One location stack: a Play API bound onto the
+  built-in library API and, through it, onto a Freedesktop service.
 
 ## Play Integrity: what it can and cannot satisfy
 

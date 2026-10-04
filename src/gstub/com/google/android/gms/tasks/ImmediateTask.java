@@ -1,17 +1,29 @@
 package com.google.android.gms.tasks;
 
+import android.os.Handler;
+import android.os.Looper;
+
 import java.util.concurrent.Executor;
 
 /*
  * A Task that is already finished the moment it is handed out, carrying either
- * a result or an exception. Listeners run synchronously on the thread that
- * attaches them; the optional Executor overloads defer to it so callers that
- * pass their own executor keep their threading expectations. This is all the
- * concurrency the shim needs, because none of its producers do real work.
+ * a result or an exception. Play's contract for a listener added without an
+ * executor is that it runs on the main thread, and apps touch their UI from
+ * those callbacks, so the no-executor overloads post to the main Looper even
+ * though the result is already known. The Executor overloads defer to the
+ * caller's executor. This is all the concurrency the shim needs, because none
+ * of its producers do real work.
  */
 final class ImmediateTask<TResult> extends Task<TResult> {
 	private final TResult result;
 	private final Exception exception;
+
+	// A fresh Handler per call is cheap and keeps this class free of static
+	// state tied to a Looper.
+	private static Executor mainThread() {
+		final Handler handler = new Handler(Looper.getMainLooper());
+		return handler::post;
+	}
 
 	private ImmediateTask(TResult result, Exception exception) {
 		this.result = result;
@@ -56,10 +68,7 @@ final class ImmediateTask<TResult> extends Task<TResult> {
 
 	@Override
 	public Task<TResult> addOnSuccessListener(OnSuccessListener<? super TResult> listener) {
-		if (exception == null) {
-			listener.onSuccess(result);
-		}
-		return this;
+		return addOnSuccessListener(mainThread(), listener);
 	}
 
 	@Override
@@ -72,10 +81,7 @@ final class ImmediateTask<TResult> extends Task<TResult> {
 
 	@Override
 	public Task<TResult> addOnFailureListener(OnFailureListener listener) {
-		if (exception != null) {
-			listener.onFailure(exception);
-		}
-		return this;
+		return addOnFailureListener(mainThread(), listener);
 	}
 
 	@Override
@@ -88,8 +94,7 @@ final class ImmediateTask<TResult> extends Task<TResult> {
 
 	@Override
 	public Task<TResult> addOnCompleteListener(OnCompleteListener<TResult> listener) {
-		listener.onComplete(this);
-		return this;
+		return addOnCompleteListener(mainThread(), listener);
 	}
 
 	@Override
